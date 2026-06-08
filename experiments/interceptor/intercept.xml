@@ -1,0 +1,97 @@
+<mujoco model="intercept">
+  <statistic extent="60" center="0 0 30"/>
+
+  <visual>
+    <global azimuth="90" elevation="-10" offwidth="1280" offheight="720"/>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.35 0.35 0.4" specular="0 0 0"/>
+    <!-- haze color matches the skybox horizon so the ground fades into the sky -->
+    <rgba haze="0.74 0.82 0.9 1"/>
+    <map zfar="2000" haze="0.35"/>
+    <quality shadowsize="4096"/>
+  </visual>
+
+  <asset>
+    <!-- infinite-distance sky: vertical gradient, deep blue overhead -> pale at horizon -->
+    <texture name="sky" type="skybox" builtin="gradient"
+             rgb1="0.22 0.42 0.78" rgb2="0.74 0.82 0.9" width="256" height="256"/>
+    <texture name="grid" type="2d" builtin="checker" rgb1=".24 .33 .24" rgb2=".18 .26 .2"
+             width="512" height="512" mark="edge" markrgb=".45 .55 .45"/>
+    <material name="grid" texture="grid" texrepeat="80 80" reflectance="0.05"/>
+    <material name="pylon" rgba=".45 .4 .35 1"/>
+  </asset>
+
+  <option density="1.225" viscosity="1.8e-5" gravity="0 0 -9.81"
+          integrator="implicitfast" timestep="0.002"/>
+
+  <default>
+    <geom rgba=".5 .55 .6 1"/>
+    <default class="scenery"><geom contype="0" conaffinity="0"/></default>
+  </default>
+
+  <worldbody>
+    <light pos="60 -40 120" dir="-0.4 0.3 -1" diffuse="1 1 1" castshadow="true"/>
+    <geom name="ground" type="plane" pos="0 0 0" size="0 0 .1" material="grid" condim="3"/>
+
+    <!-- ===== scenery: motion reference points ===== -->
+    <!-- ground pylon grid (9x9, 50 m spacing, spans -200..200) -->
+    <replicate count="9" offset="50 0 0">
+      <replicate count="9" offset="0 50 0">
+        <body pos="-200 -200 0" childclass="scenery">
+          <geom type="box" size="0.4 0.4 4" pos="0 0 4" material="pylon"/>
+        </body>
+      </replicate>
+    </replicate>
+
+    <!-- ===== target drone (cruises sideways at 30 m, 15 m/s) ===== -->
+    <body name="target" pos="0 0 30">
+      <freejoint/>
+      <geom name="core" type="box" size="0.09 0.09 0.03" mass="0.6" rgba=".2 .25 .35 1"/>
+      <geom name="arm_px" type="capsule" fromto="0 0 0  0.18 0 0" size="0.012" mass="0.05"/>
+      <geom name="arm_nx" type="capsule" fromto="0 0 0 -0.18 0 0" size="0.012" mass="0.05"/>
+      <geom name="arm_py" type="capsule" fromto="0 0 0  0 0.18 0" size="0.012" mass="0.05"/>
+      <geom name="arm_ny" type="capsule" fromto="0 0 0  0 -0.18 0" size="0.012" mass="0.05"/>
+      <geom name="rot_px" type="cylinder" pos=" 0.18 0 0.02" size="0.06 0.006" mass="0.1" rgba=".8 .3 .2 1"/>
+      <geom name="rot_nx" type="cylinder" pos="-0.18 0 0.02" size="0.06 0.006" mass="0.1" rgba=".8 .3 .2 1"/>
+      <geom name="rot_py" type="cylinder" pos=" 0 0.18 0.02" size="0.06 0.006" mass="0.1" rgba=".2 .5 .8 1"/>
+      <geom name="rot_ny" type="cylinder" pos=" 0 -0.18 0.02" size="0.06 0.006" mass="0.1" rgba=".2 .5 .8 1"/>
+      <site name="thr_px" pos=" 0.18 0 0.026" size="0.01"/>
+      <site name="thr_nx" pos="-0.18 0 0.026" size="0.01"/>
+      <site name="thr_py" pos=" 0 0.18 0.026" size="0.01"/>
+      <site name="thr_ny" pos=" 0 -0.18 0.026" size="0.01"/>
+    </body>
+
+    <!-- ===== interceptor drone (small, throwable; camera + motors point +body-z) ===== -->
+    <body name="interceptor" pos="2 0 1.2">
+      <freejoint/>
+      <geom name="i_core" type="box" size="0.035 0.035 0.012" mass="0.18" rgba=".95 .85 .1 1"/>
+      <geom name="i_arm_px" type="capsule" fromto="0 0 0  0.06 0 0" size="0.005" mass="0.01"/>
+      <geom name="i_arm_nx" type="capsule" fromto="0 0 0 -0.06 0 0" size="0.005" mass="0.01"/>
+      <geom name="i_arm_py" type="capsule" fromto="0 0 0  0 0.06 0" size="0.005" mass="0.01"/>
+      <geom name="i_arm_ny" type="capsule" fromto="0 0 0  0 -0.06 0" size="0.005" mass="0.01"/>
+      <geom name="i_rot_px" type="cylinder" pos=" 0.06 0 0.012" size="0.022 0.003" mass="0.0125" rgba=".1 .1 .1 1"/>
+      <geom name="i_rot_nx" type="cylinder" pos="-0.06 0 0.012" size="0.022 0.003" mass="0.0125" rgba=".1 .1 .1 1"/>
+      <geom name="i_rot_py" type="cylinder" pos=" 0 0.06 0.012" size="0.022 0.003" mass="0.0125" rgba=".1 .1 .1 1"/>
+      <geom name="i_rot_ny" type="cylinder" pos=" 0 -0.06 0.012" size="0.022 0.003" mass="0.0125" rgba=".1 .1 .1 1"/>
+      <!-- a little nose marker so the FPV "forward" is visible -->
+      <geom name="i_nose" type="sphere" pos="0 0 0.03" size="0.008" rgba="1 .2 .2 1"/>
+      <site name="i_thr_px" pos=" 0.06 0 0.015" size="0.006"/>
+      <site name="i_thr_nx" pos="-0.06 0 0.015" size="0.006"/>
+      <site name="i_thr_py" pos=" 0 0.06 0.015" size="0.006"/>
+      <site name="i_thr_ny" pos=" 0 -0.06 0.015" size="0.006"/>
+      <!-- onboard camera looks along +body-z (same way the motors thrust). -->
+      <camera name="fpv" pos="0 0 0.02" euler="180 0 0" fovy="80"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <general name="m_px" site="thr_px" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 20"/>
+    <general name="m_nx" site="thr_nx" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 20"/>
+    <general name="m_py" site="thr_py" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 20"/>
+    <general name="m_ny" site="thr_ny" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 20"/>
+
+    <general name="i_m_px" site="i_thr_px" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 6"/>
+    <general name="i_m_nx" site="i_thr_nx" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 6"/>
+    <general name="i_m_py" site="i_thr_py" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 6"/>
+    <general name="i_m_ny" site="i_thr_ny" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 6"/>
+  </actuator>
+</mujoco>
