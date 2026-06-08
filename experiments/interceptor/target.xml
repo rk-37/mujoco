@@ -1,0 +1,73 @@
+<mujoco model="target_drone">
+  <statistic extent="40" center="0 0 30"/>
+
+  <visual>
+    <global azimuth="90" elevation="-10"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <map zfar="400"/>
+    <quality shadowsize="4096"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="64" height="64"/>
+    <texture name="grid" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 .15 .2"
+             width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>
+    <material name="grid" texture="grid" texrepeat="40 40" reflectance="0.2"/>
+  </asset>
+
+  <!-- density+viscosity activate MuJoCo's default inertia-box fluid model (drag) on every body -->
+  <option density="1.225" viscosity="1.8e-5" gravity="0 0 -9.81"
+          integrator="implicitfast" timestep="0.002"/>
+
+  <default>
+    <geom rgba=".5 .55 .6 1"/>
+  </default>
+
+  <worldbody>
+    <light pos="0 -20 60" dir="0 0.3 -1" diffuse="1 1 1"/>
+    <geom name="ground" type="plane" pos="0 0 0" size="0 0 .1" material="grid" condim="3"/>
+
+    <!-- quad: "+" layout, arms along +/-x and +/-y. Body frame == rotor-site frame. -->
+    <body name="target" pos="0 0 30">
+      <freejoint/>
+
+      <!-- central body -->
+      <geom name="core" type="box" size="0.09 0.09 0.03" mass="0.6" rgba=".25 .3 .4 1"/>
+
+      <!-- arms (capsules from center out to each rotor) -->
+      <geom name="arm_px" type="capsule" fromto="0 0 0  0.18 0 0" size="0.012" mass="0.05"/>
+      <geom name="arm_nx" type="capsule" fromto="0 0 0 -0.18 0 0" size="0.012" mass="0.05"/>
+      <geom name="arm_py" type="capsule" fromto="0 0 0  0 0.18 0" size="0.012" mass="0.05"/>
+      <geom name="arm_ny" type="capsule" fromto="0 0 0  0 -0.18 0" size="0.012" mass="0.05"/>
+
+      <!-- rotor pods (the disks); mass here dominates roll/pitch inertia -->
+      <geom name="rot_px" type="cylinder" pos=" 0.18 0 0.02" size="0.06 0.006" mass="0.1" rgba=".8 .3 .2 1"/>
+      <geom name="rot_nx" type="cylinder" pos="-0.18 0 0.02" size="0.06 0.006" mass="0.1" rgba=".8 .3 .2 1"/>
+      <geom name="rot_py" type="cylinder" pos=" 0 0.18 0.02" size="0.06 0.006" mass="0.1" rgba=".2 .5 .8 1"/>
+      <geom name="rot_ny" type="cylinder" pos=" 0 -0.18 0.02" size="0.06 0.006" mass="0.1" rgba=".2 .5 .8 1"/>
+
+      <!-- thrust sites at the rotor tops; NO orientation => site frame == body frame -->
+      <site name="thr_px" pos=" 0.18 0 0.026" size="0.01"/>
+      <site name="thr_nx" pos="-0.18 0 0.026" size="0.01"/>
+      <site name="thr_py" pos=" 0 0.18 0.026" size="0.01"/>
+      <site name="thr_ny" pos=" 0 -0.18 0.026" size="0.01"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- each applies force along the body-z axis (tilts with the drone) -->
+    <general name="m_px" site="thr_px" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 20"/>
+    <general name="m_nx" site="thr_nx" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 20"/>
+    <general name="m_py" site="thr_py" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 20"/>
+    <general name="m_ny" site="thr_ny" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 20"/>
+  </actuator>
+
+  <keyframe>
+    <!-- nominal trim fallback; the harness overwrites with the solved trim at launch.
+         q(y,-5deg) = [cos(2.5d), 0, sin(-2.5d), 0] = [0.99905, 0, -0.04362, 0] -->
+    <key name="cruise"
+         qpos="0 0 30  0.99905 0 -0.04362 0"
+         qvel="15 0 0  0 0 0"
+         ctrl="3.0 3.0 3.0 3.0"/>
+  </keyframe>
+</mujoco>
