@@ -1,0 +1,14 @@
+<mujoco model="wind_plate">
+  <!-- air density + viscosity, wind blowing along +x at 5 m/s -->
+  <option density="1.225" viscosity="1.8e-5" wind="5 0 0" gravity="0 0 0"
+          integrator="implicitfast"/>
+
+  <worldbody>
+    <!-- a thin flat plate (ellipsoid). orientation set per-instance below -->
+    <body name="plate" pos="0 0 1">
+      <freejoint/>
+      <geom name="plate" type="ellipsoid" size=".15 .15 .002" mass=".01"
+            fluidshape="ellipsoid" rgba="0 .5 .8 1"/>
+    </body>
+  </worldbody>
+</mujoco>

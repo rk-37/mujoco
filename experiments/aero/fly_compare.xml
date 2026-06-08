@@ -1,0 +1,44 @@
+<mujoco model="fly_compare">
+  <statistic extent="8" center="6 0 1.5"/>
+  <visual>
+    <global azimuth="90" elevation="-15"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <map zfar="120"/>
+    <quality shadowsize="4096"/>
+  </visual>
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="64" height="64"/>
+    <texture name="grid" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 .15 .2" width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>
+    <material name="grid" texture="grid" texrepeat="16 16" reflectance="0.2"/>
+  </asset>
+  <option density="1.225" viscosity="1.8e-5" gravity="0 0 -9.81" integrator="implicitfast" timestep="0.002"/>
+
+  <worldbody>
+    <light pos="4 -4 8" dir="0 0.4 -1" diffuse="1 1 1"/>
+    <geom name="ground" type="plane" pos="30 0 0" size="60 12 .1" material="grid" condim="3"/>
+
+    <!-- RED: built-in ellipsoid fluid model -->
+    <body name="glider_e" pos="0 1.5 3">
+      <freejoint/>
+      <geom name="fuse_e" type="capsule" fromto="0.45 0 0  -0.55 0 0" size="0.015" mass="0.05" rgba=".5 .25 .25 1"/>
+      <geom name="nose_e" type="sphere" pos="0.45 0 0" size="0.03" mass="0.30" rgba=".8 .2 .2 1"/>
+      <geom name="wing_e" type="ellipsoid" pos="0.20 0 0" euler="0 -2 0" size="0.12 0.7 0.008" mass="0.10" fluidshape="ellipsoid" rgba=".9 .3 .2 1"/>
+      <geom name="tail_e" type="ellipsoid" pos="-0.50 0 0" size="0.07 0.25 0.006" mass="0.03" fluidshape="ellipsoid" rgba=".9 .4 .3 1"/>
+      <geom name="fin_e"  type="ellipsoid" pos="-0.50 0 0.08" euler="90 0 0" size="0.06 0.10 0.005" mass="0.02" fluidshape="ellipsoid" rgba=".9 .4 .3 1"/>
+    </body>
+
+    <!-- BLUE: airfoil-polar via callback (no fluidshape; geoms named wing/tail/fin) -->
+    <body name="glider_p" pos="0 -1.5 3">
+      <freejoint/>
+      <geom name="fuse_p" type="capsule" fromto="0.45 0 0  -0.55 0 0" size="0.015" mass="0.05" rgba=".25 .35 .5 1"/>
+      <geom name="nose_p" type="sphere" pos="0.45 0 0" size="0.03" mass="0.30" rgba=".2 .4 .8 1"/>
+      <geom name="wing" type="ellipsoid" pos="0.20 0 0" euler="0 -2 0" size="0.12 0.7 0.008" mass="0.10" rgba=".2 .55 .9 1"/>
+      <geom name="tail" type="ellipsoid" pos="-0.50 0 0" size="0.07 0.25 0.006" mass="0.03" rgba=".3 .65 .95 1"/>
+      <geom name="fin"  type="ellipsoid" pos="-0.50 0 0.08" euler="90 0 0" size="0.06 0.10 0.005" mass="0.02" rgba=".3 .65 .95 1"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <key name="launch" qpos="0 1.5 3 1 0 0 0   0 -1.5 3 1 0 0 0" qvel="14 0 0 0 0 0   14 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

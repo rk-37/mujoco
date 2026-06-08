@@ -1,0 +1,14 @@
+<mujoco model="wing">
+  <!-- wind along +x; air density 1.225. gravity off so we isolate aero forces -->
+  <option density="1.225" viscosity="1.8e-5" wind="15 0 0" gravity="0 0 0"
+          integrator="implicitfast"/>
+
+  <worldbody>
+    <body name="wing" pos="0 0 1">
+      <freejoint/>
+      <!-- chord(x)=0.4m, span(y)=2.0m, thickness(z)=0.03m: a slender wing -->
+      <geom name="wing" type="ellipsoid" size="0.2 1.0 0.015" mass="2.0"
+            fluidshape="ellipsoid" rgba=".8 .3 0 1"/>
+    </body>
+  </worldbody>
+</mujoco>
