@@ -27,7 +27,9 @@ int t_bid, t_qadr, t_vadr;
 double g_theta=0, g_Tper=0, g_v=15.0, g_alt=30.0, g_x0=-150.0, g_xend=150.0, g_yoff=30.0;
 // interceptor
 int i_bid, i_qadr, i_vadr, i_act[4], i_camid;
-double g_obs[3]={0,0,1.7};            // ground observer eye
+double g_obs[3]={0,0,1.7};            // ground observer eye (fixed; binocular viewpoint)
+double g_yaw=90*DEG, g_pitch=22*DEG;  // gaze direction (look around by panning)
+double g_fovy=45, g_fovy_def=45;      // field of view (deg); zoom in = narrow fovy
 double g_launch_from[3]={2,0,1.2};    // throw origin (beside the observer)
 double g_throw_speed=13.41;           // 30 mph
 double g_i_mg=0;                       // interceptor weight (set after load)
@@ -48,6 +50,41 @@ static void quat_z_to(const double dir[3], double q[4]){
   double an=sqrt(ax[0]*ax[0]+ax[1]*ax[1]); ax[0]/=an; ax[1]/=an;
   double ang=acos(dot), s=sin(ang/2);
   q[0]=cos(ang/2); q[1]=ax[0]*s; q[2]=ax[1]*s; q[3]=0;
+}
+
+// ---------- decorative dotted-square markers (added to the main scene) ----------
+static void add_dot(const double p[3], double rad, float r,float g,float b,float a){
+  if(scn.ngeom>=scn.maxgeom) return;
+  mjvGeom* gm=&scn.geoms[scn.ngeom];
+  mjtNum size[3]={rad,rad,rad}, pos[3]={p[0],p[1],p[2]};
+  float rgba[4]={r,g,b,a};
+  mjv_initGeom(gm, mjGEOM_SPHERE, size, pos, NULL, rgba);
+  gm->category = mjCAT_DECOR;
+  scn.ngeom++;
+}
+// camera-facing dotted square of half-size `half` centered on c
+static void add_marker(const double c[3], double half, float r,float g,float b){
+  float* fwd=scn.camera[0].forward; float* up=scn.camera[0].up;
+  double R[3]={fwd[1]*up[2]-fwd[2]*up[1], fwd[2]*up[0]-fwd[0]*up[2], fwd[0]*up[1]-fwd[1]*up[0]};
+  double rn=sqrt(R[0]*R[0]+R[1]*R[1]+R[2]*R[2]); if(rn<1e-9) return;
+  for(int k=0;k<3;k++) R[k]/=rn;
+  double U[3]={up[0],up[1],up[2]};
+  double un=sqrt(U[0]*U[0]+U[1]*U[1]+U[2]*U[2]); for(int k=0;k<3;k++) U[k]/=un;
+  double cor[4][3];                 // TL, TR, BR, BL
+  for(int k=0;k<3;k++){
+    cor[0][k]=c[k]-half*R[k]+half*U[k];
+    cor[1][k]=c[k]+half*R[k]+half*U[k];
+    cor[2][k]=c[k]+half*R[k]-half*U[k];
+    cor[3][k]=c[k]-half*R[k]-half*U[k];
+  }
+  int N=9; double rad=half*0.05; if(rad<0.05) rad=0.05;
+  for(int e=0;e<4;e++){
+    const double* A=cor[e]; const double* B=cor[(e+1)%4];
+    for(int i=0;i<N;i++){
+      double t=(double)i/N, p[3]={A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, A[2]+(B[2]-A[2])*t};
+      add_dot(p, rad, r,g,b, 0.55f);
+    }
+  }
 }
 
 // ---------- target trim (same scheme as target_sim.cc) ----------
@@ -149,14 +186,21 @@ void mouse_button(GLFWwindow* w,int b,int act,int mods){
   glfwGetCursorPos(w,&lastx,&lasty);
 }
 void mouse_move(GLFWwindow* w,double x,double y){
-  if(!bl&&!bm&&!br) return;
   double dx=x-lastx, dy=y-lasty; lastx=x; lasty=y;
-  int W,H; glfwGetWindowSize(w,&W,&H);
-  bool sh=glfwGetKey(w,GLFW_KEY_LEFT_SHIFT)==GLFW_PRESS||glfwGetKey(w,GLFW_KEY_RIGHT_SHIFT)==GLFW_PRESS;
-  mjtMouse a = br?(sh?mjMOUSE_MOVE_H:mjMOUSE_MOVE_V):bl?(sh?mjMOUSE_ROTATE_H:mjMOUSE_ROTATE_V):mjMOUSE_ZOOM;
-  mjv_moveCamera(m,a,dx/H,dy/H,&scn,&cam);
+  if(!bl&&!bm&&!br) return;
+  // binoculars: drag to look around (eye stays fixed). FOV-aware sensitivity.
+  double sens=0.0016*(g_fovy/g_fovy_def);
+  g_yaw   -= dx*sens;
+  g_pitch -= dy*sens;
+  if(g_pitch> 89*DEG) g_pitch= 89*DEG;
+  if(g_pitch<-20*DEG) g_pitch=-20*DEG;
 }
-void scroll(GLFWwindow* w,double xo,double yo){ mjv_moveCamera(m,mjMOUSE_ZOOM,0,-0.05*yo,&scn,&cam); }
+void scroll(GLFWwindow* w,double xo,double yo){
+  // zoom IN only (narrow FOV like binoculars); never zoom out past naked-eye default
+  g_fovy *= (1.0 - 0.08*yo);
+  if(g_fovy>g_fovy_def) g_fovy=g_fovy_def;   // no zoom-out beyond default
+  if(g_fovy<4.0)       g_fovy=4.0;           // max magnification
+}
 
 // step the scenario forward one control tick (target + interceptor logic + reset)
 static double g_min_miss=1e9;
@@ -241,7 +285,10 @@ int main(int argc, char** argv){
   mjv_defaultScene(&scn); mjv_defaultScene(&scnf); mjr_defaultContext(&con);
   mjv_makeScene(m,&scn,4000); mjv_makeScene(m,&scnf,4000);
   mjr_makeContext(m,&con,mjFONTSCALE_150);
-  cam.type=mjCAMERA_FREE;   // re-aimed each frame from the ground observer
+  // binocular camera: eye fixed at the observer; look around + zoom in only
+  cam.type=mjCAMERA_FREE;
+  g_fovy_def = m->vis.global.fovy;   // naked-eye FOV (no zoom-out past this)
+  g_fovy = g_fovy_def;
 
   glfwSetKeyCallback(win,keyboard); glfwSetCursorPosCallback(win,mouse_move);
   glfwSetMouseButtonCallback(win,mouse_button); glfwSetScrollCallback(win,scroll);
@@ -256,17 +303,25 @@ int main(int argc, char** argv){
       if(d->qpos[t_qadr+0] >= g_xend) scene_reset();   // target departed -> loop
     }
 
-    // ----- main view: ground observer, gaze follows the target -----
+    // ----- main view: binoculars (eye fixed at observer, look around, zoom in) -----
     double Tp[3]={d->xpos[3*t_bid+0],d->xpos[3*t_bid+1],d->xpos[3*t_bid+2]};
+    double Ip[3]={d->xpos[3*i_bid+0],d->xpos[3*i_bid+1],d->xpos[3*i_bid+2]};
     double vv[3]={Tp[0]-g_obs[0],Tp[1]-g_obs[1],Tp[2]-g_obs[2]};
     double range=sqrt(vv[0]*vv[0]+vv[1]*vv[1]+vv[2]*vv[2]);
-    cam.lookat[0]=Tp[0]; cam.lookat[1]=Tp[1]; cam.lookat[2]=Tp[2];
-    cam.distance=range;
-    cam.azimuth=atan2(vv[1],vv[0])/DEG;
-    cam.elevation=asin(vv[2]/range)/DEG;
+
+    // magnification via FOV; eye stays at g_obs by placing lookat ahead along the gaze
+    m->vis.global.fovy = g_fovy;
+    double cp=cos(g_pitch), sp=sin(g_pitch), cy=cos(g_yaw), sy=sin(g_yaw);
+    double fwd[3]={cp*cy, cp*sy, sp}, Dl=20.0;
+    cam.azimuth=g_yaw/DEG; cam.elevation=g_pitch/DEG; cam.distance=Dl;
+    cam.lookat[0]=g_obs[0]+Dl*fwd[0];
+    cam.lookat[1]=g_obs[1]+Dl*fwd[1];
+    cam.lookat[2]=g_obs[2]+Dl*fwd[2];
 
     mjrRect full={0,0,0,0}; glfwGetFramebufferSize(win,&full.width,&full.height);
     mjv_updateScene(m,d,&opt,NULL,&cam,mjCAT_ALL,&scn);
+    add_marker(Tp, 1.6, 1,0,0);   // faint dotted red square around the target
+    add_marker(Ip, 0.7, 0,1,0);   // faint dotted green square around the interceptor
     mjr_render(full,&scn,&con);
 
     // ----- HUD -----
