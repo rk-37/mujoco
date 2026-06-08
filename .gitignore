@@ -21,6 +21,9 @@ build_cmake/
 python/dist/
 doc/_build
 
+# CMake test-discovery artifacts
+cmake_test_discovery_*.json
+
 # Exclude macOS folder attributes
 .DS_Store
 

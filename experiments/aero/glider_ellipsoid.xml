@@ -1,0 +1,14 @@
+<mujoco model="glider_ellipsoid">
+  <option density="1.225" viscosity="1.8e-5" gravity="0 0 -9.81" integrator="implicitfast" timestep="0.002"/>
+  <worldbody>
+    <body name="glider" pos="0 0 3">
+      <freejoint/>
+      <geom name="fuse" type="capsule" fromto="0.45 0 0  -0.55 0 0" size="0.015" mass="0.05"/>
+      <geom name="nose" type="sphere" pos="0.45 0 0" size="0.03" mass="0.30"/>
+      <geom name="wing" type="ellipsoid" pos="0.20 0 0" euler="0 -2 0" size="0.12 0.7 0.008" mass="0.10" fluidshape="ellipsoid"/>
+      <geom name="tail" type="ellipsoid" pos="-0.50 0 0" size="0.07 0.25 0.006" mass="0.03" fluidshape="ellipsoid"/>
+      <geom name="fin"  type="ellipsoid" pos="-0.50 0 0.08" euler="90 0 0" size="0.06 0.10 0.005" mass="0.02" fluidshape="ellipsoid"/>
+    </body>
+  </worldbody>
+  <keyframe><key name="launch" qpos="0 0 3  1 0 0 0" qvel="14 0 0  0 0 0"/></keyframe>
+</mujoco>
