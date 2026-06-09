@@ -78,6 +78,7 @@
       <site name="i_thr_nx" pos="-0.06 0 0.015" size="0.006"/>
       <site name="i_thr_py" pos=" 0 0.06 0.015" size="0.006"/>
       <site name="i_thr_ny" pos=" 0 -0.06 0.015" size="0.006"/>
+      <site name="i_imu" pos="0 0 0" size="0.004"/>   <!-- IMU mount -->
       <!-- onboard camera looks along +body-z (same way the motors thrust). -->
       <camera name="fpv" pos="0 0 0.02" euler="180 0 0" fovy="80"/>
     </body>
@@ -94,4 +95,11 @@
     <general name="i_m_py" site="i_thr_py" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 6"/>
     <general name="i_m_ny" site="i_thr_ny" gear="0 0 1 0 0 0" ctrllimited="true" ctrlrange="0 6"/>
   </actuator>
+
+  <!-- onboard interceptor sensors fed to the Python controller -->
+  <sensor>
+    <accelerometer name="i_acc"  site="i_imu"/>   <!-- specific force, body frame (m/s^2) -->
+    <gyro          name="i_gyro" site="i_imu"/>   <!-- angular velocity, body frame (rad/s) -->
+    <framepos      name="i_pos"  objtype="site" objname="i_imu"/>  <!-- world pos; z = altitude -->
+  </sensor>
 </mujoco>

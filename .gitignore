@@ -45,3 +45,6 @@ MUJOCO_LOG.TXT
 wasm/**/dist/
 **/node_modules/
 
+# Python virtualenvs (experiments)
+.venv/
+
